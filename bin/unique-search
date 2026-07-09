@@ -1,0 +1,45 @@
+#!/usr/bin/env node
+import { createReadStream } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const VERSION = '0.1.0';
+const USAGE = `
+unique-search - A unique-line search tool
+
+Usage:
+  unique-search [options] <search_query> [input_file]
+
+Options:
+  --help        Show this help message and exit
+  --version     Show version info and exit
+`;
+
+function printUsage() {
+  process.stdout.write(USAGE);
+}
+
+function printVersion() {
+  process.stdout.write(`${VERSION}\n`);
+}
+
+// Minimal CLI parsing for --help and --version
+const args = process.argv.slice(2);
+if (args.includes('--help')) {
+  printUsage();
+  process.exit(0);
+} else if (args.includes('--version')) {
+  printVersion();
+  process.exit(0);
+}
+
+// No further logic yet; exit stub.
+if (!args.length) {
+  printUsage();
+  process.exit(1);
+}
+
+// Placeholder for main logic: to be implemented next
+process.stderr.write('Error: CLI feature not yet implemented.\n');
+process.exit(1);
