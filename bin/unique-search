@@ -1,8 +1,5 @@
 #!/usr/bin/env node
-import { createReadStream } from 'node:fs';
-import { readFileSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readInput } from '../src/input/readInput.js';
 
 const VERSION = '0.1.0';
 const USAGE = `
@@ -34,12 +31,31 @@ if (args.includes('--help')) {
   process.exit(0);
 }
 
-// No further logic yet; exit stub.
+// Accept: unique-search [options] <search_query> [input_file]
 if (!args.length) {
   printUsage();
   process.exit(1);
 }
 
-// Placeholder for main logic: to be implemented next
-process.stderr.write('Error: CLI feature not yet implemented.\n');
-process.exit(1);
+// Parse arguments: find first non-option arg as search_query, then [input_file]
+const nonOptArgs = args.filter(arg => !arg.startsWith('--'));
+const searchQuery = nonOptArgs[0];
+const inputFileArg = nonOptArgs[1];
+
+if (!searchQuery) {
+  process.stderr.write('Error: Missing <search_query>.\n');
+  printUsage();
+  process.exit(1);
+}
+
+(async () => {
+  try {
+    const lines = await readInput(inputFileArg);
+    // Proof of concept: just print number of lines read
+    process.stdout.write(`Read ${lines.length} lines.\n`);
+    // For later: pass to uniqueness+search modules
+  } catch (err) {
+    process.stderr.write(`Error: ${err.message}\n`);
+    process.exit(1);
+  }
+})();
