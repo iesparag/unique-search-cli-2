@@ -12,11 +12,12 @@ Usage:
   unique-search [options] <search_query> [input_file]
 
 Options:
-  --help            Show this help message and exit
-  --version         Show version info and exit
-  --ignore-case     Make search case-insensitive (default)
-  --case-sensitive  Make search case-sensitive
-  --regex           Search using a regular expression (with error handling)
+  --help                Show this help message and exit
+  --version             Show version info and exit
+  --ignore-case         Make search case-insensitive (default)
+  --case-sensitive      Make search case-sensitive
+  --regex               Search using a regular expression (with error handling)
+  --unique-by <field>   Assume JSON lines; filter unique by field and match by field value
 `;
 
 function printUsage() {
@@ -56,8 +57,31 @@ if (caseSensitiveIx !== -1 && ignoreCaseIx !== -1) {
   caseSensitive = false; // default is case-insensitive
 }
 
-// Remove options from args
-const nonOptArgs = args.filter(arg => !arg.startsWith('--'));
+// Parse --unique-by <field> option
+let uniqueByField = undefined;
+const uniqueByIdx = args.indexOf('--unique-by');
+if (uniqueByIdx !== -1) {
+  if (!args[uniqueByIdx + 1] || args[uniqueByIdx + 1].startsWith('--')) {
+    process.stderr.write('Error: --unique-by must be followed by a field name.\n');
+    printUsage();
+    process.exit(1);
+  }
+  uniqueByField = args[uniqueByIdx + 1];
+}
+
+// Remove options from args for positional args
+let i = 0;
+const nonOptArgs = [];
+while (i < args.length) {
+  const a = args[i];
+  if (a === '--unique-by') { i += 2; continue; }
+  if (a === '--regex' || a === '--ignore-case' || a === '--case-sensitive' || a === '--help' || a === '--version') {
+    i++;
+    continue;
+  }
+  if (!a.startsWith('--')) nonOptArgs.push(a);
+  i++;
+}
 const searchQuery = nonOptArgs[0];
 const inputFileArg = nonOptArgs[1];
 
@@ -69,16 +93,20 @@ if (!searchQuery) {
 
 (async () => {
   try {
-    const lines = await readInput(inputFileArg);
+    const lines = await readInput(inputFileArg, { jsonLines: Boolean(uniqueByField) });
     if (!lines || lines.length === 0) {
       outputResults("__NO_INPUT__");
       return;
     }
     // Deduplicate before search
-    const uniqueLines = filterUnique(lines);
+    const uniqueItems = filterUnique(lines, uniqueByField);
     let matched;
     try {
-      matched = matchItems(uniqueLines, searchQuery, { caseSensitive, regex: useRegex });
+      matched = matchItems(uniqueItems, searchQuery, {
+        caseSensitive,
+        regex: useRegex,
+        uniqueByField,
+      });
     } catch (err) {
       if (useRegex && /Invalid regular expression pattern/.test(err.message)) {
         process.stderr.write(`Regex error: ${err.message}\n`);
@@ -87,7 +115,7 @@ if (!searchQuery) {
         throw err;
       }
     }
-    outputResults(matched);
+    outputResults(matched, { json: Boolean(uniqueByField) });
   } catch (err) {
     process.stderr.write(`Error: ${err.message}\n`);
     process.exit(1);

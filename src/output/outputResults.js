@@ -4,11 +4,15 @@
  * If results is null/undefined, throw.
  * If results === '__NO_INPUT__', print 'No data found.'
  * If results is empty array, print 'No matches found.'
- * Otherwise, print each result line (string), separated by linebreaks (no extra blank line).
+ * Otherwise, print each result line (string or JSON), separated by linebreaks (no extra blank line).
+ * If opts.json is true, results are objects and are stringified
  *
- * @param {string[]|"__NO_INPUT__"} results
+ * @param {string[]|object[]|"__NO_INPUT__"} results
+ * @param {object} [opts]
+ *   @param {boolean} [opts.json] - if true, print JSON.stringify for each result
  */
-export function outputResults(results) {
+export function outputResults(results, opts = {}) {
+  const { json = false } = opts;
   if (results === undefined || results === null) {
     throw new TypeError('results is required');
   }
@@ -23,6 +27,12 @@ export function outputResults(results) {
     process.stdout.write('No matches found.\n');
     return;
   }
-  // Print each line; last line has newline (no blank)
-  process.stdout.write(results.join('\n') + '\n');
+  if (json) {
+    for (let i = 0; i < results.length; ++i) {
+      process.stdout.write(JSON.stringify(results[i]));
+      process.stdout.write('\n');
+    }
+  } else {
+    process.stdout.write(results.join('\n') + '\n');
+  }
 }

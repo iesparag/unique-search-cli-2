@@ -75,3 +75,25 @@ test('readInput throws if no file and stdin is TTY', async (t) => {
     });
   }
 });
+
+test('readInput can parse JSON lines and gives objects, skips bad JSON', async () => {
+  const lines = `{"x":1,"foo":"bar"}\n{"x":2}\nnot-a-json\n{"y":100}\n{"x":3}\n{"x":null}\n[1,2,3]\n{"x":4}`;
+  // Make temp file
+  const { filePath, tmpDir } = makeTempFile(lines);
+  try {
+    const res = await readInput(filePath, { jsonLines: true });
+    // Only lines with { x: ... } objects, except for missing 'x' (we do not filter here)
+    assert.ok(res.every(o => typeof o === 'object' && !Array.isArray(o) && o !== null));
+    // Should parse all object lines, skip bad lines and arrays
+    assert.deepEqual(res, [
+      { x: 1, foo: 'bar' },
+      { x: 2 },
+      { y: 100 }, // not filtered here
+      { x: 3 },
+      { x: null },
+      { x: 4 }
+    ]);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
