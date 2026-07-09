@@ -29,3 +29,28 @@ test('filterUnique throws on non-array input', () => {
   assert.throws(() => filterUnique({}), /array must be an array/);
   assert.throws(() => filterUnique('abc'), /array must be an array/);
 });
+
+test('filterUnique on JSON, unique by key', () => {
+  const arr = [
+    {x: 1, z: "a"},
+    {x: 2, z: "b"},
+    {x: 1, z: "c"},
+    {y: 1},
+    {x: 3},
+    {x: null},
+    {x: 2, z: "d"},
+    [1,2,3],
+    {x: undefined},
+    {x: 4},
+  ];
+  const filtered = filterUnique(arr, 'x');
+  // x=1,2,3,null,undefined,4; first per key
+  assert.deepEqual(filtered, [
+    {x:1,z:"a"},
+    {x:2,z:"b"},
+    {x:3},
+    {x:null},
+    {x:undefined},
+    {x:4}
+  ]);
+});
