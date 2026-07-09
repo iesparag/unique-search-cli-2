@@ -24,7 +24,6 @@ export function matchItems(dataset, query, options = {}) {
   if (!query.length) return [];
 
   let matcher;
-  let regexUsed = false;
   let reg;
   if (regex) {
     let pattern = query;
@@ -34,7 +33,7 @@ export function matchItems(dataset, query, options = {}) {
     if (m) {
       pattern = m[1];
       flags = m[2] || '';
-      regexUsed = true;
+      // Ignore --case-sensitive if flags explicitly provided
     } else {
       flags = caseSensitive ? '' : 'i';
     }
@@ -43,6 +42,7 @@ export function matchItems(dataset, query, options = {}) {
     } catch (err) {
       throw new Error(`Invalid regular expression pattern: ${err.message}`);
     }
+    // Regex: test anywhere in string (no ^$ forced)
     matcher = subj => typeof subj === 'string' && reg.test(subj);
   } else {
     matcher = (subj, pat) => {
@@ -64,9 +64,7 @@ export function matchItems(dataset, query, options = {}) {
     // JSON objects: match only on the specified field's value
     // Return the entire object for matching lines
     const matched = [];
-    let idx = 0;
     for (const obj of dataset) {
-      idx++;
       if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) continue;
       const v = obj[uniqueByField];
       if (v === undefined || v === null) continue;

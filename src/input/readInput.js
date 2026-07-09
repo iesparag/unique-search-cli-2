@@ -28,6 +28,7 @@ export async function readInput(filePath, options = {}) {
       };
     } else {
       // Reading from stdin
+      // Treat as non-tty unless explicitly TTY
       if (process.stdin.isTTY) {
         throw new Error('No input file provided and no data piped via stdin.');
       }
@@ -40,10 +41,14 @@ export async function readInput(filePath, options = {}) {
     });
 
     let lineIdx = 0;
+    let readOne = false;
     for await (const line of rl) {
       lineIdx++;
+      readOne = true;
       if (!jsonLines) {
-        items.push(line);
+        if (line !== undefined && line !== null) {
+          items.push(line);
+        }
         continue;
       }
       // Parse as JSON (skip empty lines)
@@ -59,11 +64,14 @@ export async function readInput(filePath, options = {}) {
         process.stderr.write(`Skipping line ${lineIdx}: ${err.message}\n`);
       }
     }
-
+    // Special: if input file is empty (0 bytes) or stdin has no lines, items is empty
     if (filePath && closeStream) {
       closeStream();
     }
-
+    if (!readOne && !filePath) {
+      // stdin but no lines at all: treat as no input
+      return [];
+    }
     return items;
   } catch (err) {
     if (err.code === 'ENOENT') {
