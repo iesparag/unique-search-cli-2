@@ -1,6 +1,9 @@
+# Node modules
 node_modules/
-.env
-dist/
-coverage/
-*.log
+
+# dotenv files
+.env*
+
+# OS files
 .DS_Store
+Thumbs.db
