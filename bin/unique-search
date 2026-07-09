@@ -12,8 +12,11 @@ Usage:
   unique-search [options] <search_query> [input_file]
 
 Options:
-  --help        Show this help message and exit
-  --version     Show version info and exit
+  --help            Show this help message and exit
+  --version         Show version info and exit
+  --ignore-case     Make search case-insensitive (default)
+  --case-sensitive  Make search case-sensitive
+  --regex           Search using a regular expression (with error handling)
 `;
 
 function printUsage() {
@@ -24,7 +27,9 @@ function printVersion() {
   process.stdout.write(`${VERSION}\n`);
 }
 
-// Minimal CLI parsing for --help and --version
+// CLI parsing for options
+default: (no --case-sensitive nor --ignore-case): case-insensitive
+// Accepts: unique-search [options] <search_query> [input_file]
 const args = process.argv.slice(2);
 if (args.includes('--help')) {
   printUsage();
@@ -34,13 +39,24 @@ if (args.includes('--help')) {
   process.exit(0);
 }
 
-// Accept: unique-search [options] <search_query> [input_file]
-if (!args.length) {
-  printUsage();
-  process.exit(1);
+// Whether to use regex
+const useRegex = args.includes('--regex');
+// explicit case flags (cannot both be set at once; last takes precedence)
+const ignoreCaseIx = args.lastIndexOf('--ignore-case');
+const caseSensitiveIx = args.lastIndexOf('--case-sensitive');
+let caseSensitive;
+if (caseSensitiveIx !== -1 && ignoreCaseIx !== -1) {
+  // If both are present: which comes last wins
+  caseSensitive = caseSensitiveIx > ignoreCaseIx;
+} else if (caseSensitiveIx !== -1) {
+  caseSensitive = true;
+} else if (ignoreCaseIx !== -1) {
+  caseSensitive = false;
+} else {
+  caseSensitive = false; // default is case-insensitive
 }
 
-// Parse arguments: find first non-option arg as search_query, then [input_file]
+// Remove options from args
 const nonOptArgs = args.filter(arg => !arg.startsWith('--'));
 const searchQuery = nonOptArgs[0];
 const inputFileArg = nonOptArgs[1];
@@ -60,8 +76,17 @@ if (!searchQuery) {
     }
     // Deduplicate before search
     const uniqueLines = filterUnique(lines);
-    // Perform search (default: case-insensitive exact match)
-    const matched = matchItems(uniqueLines, searchQuery, { caseSensitive: false });
+    let matched;
+    try {
+      matched = matchItems(uniqueLines, searchQuery, { caseSensitive, regex: useRegex });
+    } catch (err) {
+      if (useRegex && /Invalid regular expression pattern/.test(err.message)) {
+        process.stderr.write(`Regex error: ${err.message}\n`);
+        process.exit(2);
+      } else {
+        throw err;
+      }
+    }
     outputResults(matched);
   } catch (err) {
     process.stderr.write(`Error: ${err.message}\n`);
