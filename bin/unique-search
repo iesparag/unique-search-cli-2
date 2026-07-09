@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readInput } from '../src/input/readInput.js';
 import { matchItems } from '../src/search/matchItems.js';
+import { outputResults } from '../src/output/outputResults.js';
 
 const VERSION = '0.1.0';
 const USAGE = `
@@ -52,16 +53,13 @@ if (!searchQuery) {
 (async () => {
   try {
     const lines = await readInput(inputFileArg);
+    if (!lines || lines.length === 0) {
+      outputResults("__NO_INPUT__");
+      return;
+    }
     // Perform search (default: case-insensitive exact match)
     const matched = matchItems(lines, searchQuery, { caseSensitive: false });
-    if (matched.length === 0) {
-      process.stdout.write('No matches found.\n');
-    } else {
-      for (const line of matched) {
-        // Print each matching line to stdout (no trailing extra newline)
-        console.log(line);
-      }
-    }
+    outputResults(matched);
   } catch (err) {
     process.stderr.write(`Error: ${err.message}\n`);
     process.exit(1);
