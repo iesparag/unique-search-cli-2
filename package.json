@@ -1,0 +1,21 @@
+{
+  "name": "unique-search-cli-2",
+  "version": "0.1.0",
+  "description": "A unique command-line search utility with uniqueness filtering and flexible matching options.",
+  "type": "module",
+  "bin": {
+    "unique-search": "bin/unique-search"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "cli",
+    "search",
+    "unique",
+    "deduplicate",
+    "nodejs"
+  ],
+  "author": "iesparag",
+  "license": "MIT"
+}
