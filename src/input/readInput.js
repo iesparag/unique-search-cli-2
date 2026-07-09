@@ -3,20 +3,24 @@ import fs from 'node:fs';
 import readline from 'node:readline';
 
 /**
- * Efficiently read lines from a file or stdin (UTF-8), returns array of strings.
+ * Efficiently read lines (plain or JSON) from a file or stdin (UTF-8).
+ * If options.jsonLines is true, parse each line as JSON;
+ *   upon parse error, print warning to stderr with line number and skip line.
  * If filePath is not provided, reads from process.stdin.
  *
- * @param {string | undefined} filePath
- * @returns {Promise<string[]>}
- * @throws on file-not-found or other I/O errors.
+ * @param {string|undefined} filePath 
+ * @param {object} [options] { jsonLines?: boolean }
+ * @returns {Promise<string[]|object[]>} Array of lines (string) or JSON objects.
+ * @throws on file-not-found or I/O errors (not on parse errors).
  */
-export async function readInput(filePath) {
-  const lines = [];
+export async function readInput(filePath, options = {}) {
+  const { jsonLines = false } = options;
+  const items = [];
   let inputStream, closeStream = null;
 
   try {
     if (filePath) {
-      // Check file existence separately to provide friendly error
+      // Check file existence for friendly error
       await fs.promises.access(filePath, fs.constants.R_OK);
       inputStream = fs.createReadStream(filePath, { encoding: 'utf8' });
       closeStream = () => {
@@ -25,11 +29,9 @@ export async function readInput(filePath) {
     } else {
       // Reading from stdin
       if (process.stdin.isTTY) {
-        // No file and nothing piped in: provide helpful message
         throw new Error('No input file provided and no data piped via stdin.');
       }
       inputStream = process.stdin;
-      // stdin is not closed by us
     }
 
     const rl = readline.createInterface({
@@ -37,15 +39,32 @@ export async function readInput(filePath) {
       crlfDelay: Infinity
     });
 
+    let lineIdx = 0;
     for await (const line of rl) {
-      lines.push(line);
+      lineIdx++;
+      if (!jsonLines) {
+        items.push(line);
+        continue;
+      }
+      // Parse as JSON (skip empty lines)
+      if (line.trim() === '') continue;
+      try {
+        let obj = JSON.parse(line);
+        if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+          process.stderr.write(`Skipping line ${lineIdx}: Not a JSON object\n`);
+          continue;
+        }
+        items.push(obj);
+      } catch (err) {
+        process.stderr.write(`Skipping line ${lineIdx}: ${err.message}\n`);
+      }
     }
 
     if (filePath && closeStream) {
       closeStream();
     }
 
-    return lines;
+    return items;
   } catch (err) {
     if (err.code === 'ENOENT') {
       throw new Error(`Input file not found: ${filePath}`);
