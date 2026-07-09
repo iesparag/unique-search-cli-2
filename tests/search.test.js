@@ -102,3 +102,30 @@ test('matchItems: throws for invalid regex pattern', () => {
     /Invalid regular expression pattern/
   );
 });
+
+test('matchItems: works with objects and JSON field matching', () => {
+  const arr = [
+    { id: 'abc', name: 'MyRecord', msg: 'fooerr' },
+    { id: 'def', name: 'NotThis', msg: 'hello world' },
+    { id: 'guy', name: 'BigGINA', msg: 'Error: scary' },
+    { id: 'xyz', name: 'ZOW', msg: 'snafu error bar' },
+    { id: 'nop', name: 'NoMatch', foo: 'error' }
+  ];
+  let matches = matchItems(arr, 'error', { uniqueByField: 'msg' });
+  // Should match third and fourth (case-insensitive search in 'msg')
+  assert.deepEqual(matches, [
+    { id: 'guy', name: 'BigGINA', msg: 'Error: scary' },
+    { id: 'xyz', name: 'ZOW', msg: 'snafu error bar' }
+  ]);
+
+  matches = matchItems(arr, 'hello', { uniqueByField: 'msg', caseSensitive: true });
+  assert.deepEqual(matches, [{ id: 'def', name: 'NotThis', msg: 'hello world' }]);
+
+  // regex in uniqueByField mode
+  matches = matchItems(arr, 'fooerr', { uniqueByField: 'msg', regex: true });
+  assert.deepEqual(matches, [{ id: 'abc', name: 'MyRecord', msg: 'fooerr' }]);
+
+  // No match
+  matches = matchItems(arr, 'notfound', { uniqueByField: 'msg' });
+  assert.deepEqual(matches, []);
+});
